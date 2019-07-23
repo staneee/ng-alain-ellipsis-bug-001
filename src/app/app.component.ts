@@ -1,36 +1,55 @@
-import { Component } from '@angular/core';
-import { NzMessageService } from 'ng-zorro-antd';
-import { STColumn } from '@delon/abc';
-import { SFSchema } from '@delon/form';
+import { AfterViewInit, Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { NzTableComponent } from 'ng-zorro-antd';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+
+export interface VirtualDataInterface {
+  index: number;
+  name: string;
+  age: number;
+  address: string;
+}
 
 @Component({
   selector: 'my-app',
   templateUrl: './app.component.html'
 })
-export class AppComponent {
-  url = `/users?total=100`;
-  params = { a: 1, b: 2 };
-  columns: STColumn[] = [
-    { title: '编号', index: 'id' },
-    { title: '头像', type: 'img', width: 50, index: 'picture.thumbnail' },
-    { title: '邮箱', index: 'email' },
-    { title: '电话', index: 'phone' },
-    { title: '注册时间', type: 'date', index: 'registered' },
-  ];
-  // @delon/form
-  schema: SFSchema = {
-    properties: {
-      name: {
-        type: 'string',
-        title: 'Name',
-        ui: {
-          addOnAfter: 'RMB',
-          placeholder: 'RMB结算'
-        }
-      }
-    },
-    required: ['name']
-  };
-  constructor(public msg: NzMessageService) { }
-  submit(value: any) { this.msg.success(JSON.stringify(value)); }
+export class AppComponent  implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('virtualTable', { static: false }) nzTableComponent: NzTableComponent;
+  private destroy$ = new Subject();
+  listOfData: VirtualDataInterface[] = [];
+
+  scrollToIndex(index: number): void {
+    this.nzTableComponent.cdkVirtualScrollViewport.scrollToIndex(index);
+  }
+
+  trackByIndex(_: number, data: VirtualDataInterface): number {
+    return data.index;
+  }
+
+  ngOnInit(): void {
+    const data = [];
+    for (let i = 0; i < 20000; i++) {
+      data.push({
+        index: i,
+        name: `Edward King`,
+        age: 32,
+        address: `London`
+      });
+    }
+    this.listOfData = data;
+  }
+
+  ngAfterViewInit(): void {
+    this.nzTableComponent.cdkVirtualScrollViewport.scrolledIndexChange
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((data: number) => {
+        console.log('scroll index to', data);
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 }
